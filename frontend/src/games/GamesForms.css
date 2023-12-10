@@ -1,0 +1,15 @@
+.game-form__header {
+  color: white;
+  text-align: center;
+}
+
+.game-form {
+  width: 90%;
+  max-width: 25rem;
+  margin: 7rem auto;
+  text-align: center;
+}
+
+.game-form form {
+  margin-bottom: 1rem;
+}
