@@ -1,24 +1,17 @@
-import React, { useEffect, useState } from "react";
-import Card from "../shared/components/UIElements/Card";
-import Input from "../shared/components/FormElements/Input";
-import Button from "../shared/components/FormElements/Button";
-import {
-  VALIDATOR_REQUIRE,
-  VALIDATOR_MINLENGTH,
-  VALIDATOR_MAXLENGTH,
-} from "../shared/util/validators";
-import { useForm } from "../shared/hooks/form-hook";
-import "./TeamsForms.css";
-import api from "../shared/api";
-import {
-  useHistory,
-  useParams,
-} from "react-router-dom/cjs/react-router-dom.min";
-import axios from "axios";
+import React, { useContext, useEffect, useState } from "react";
+import TextField from "@mui/material/TextField";
+import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
+import MenuItem from "@mui/material/MenuItem";
+import { Button, Container, Paper, Typography } from "@mui/material";
+import { AuthContext } from "../shared/context/auth-context";
+import { VALIDATOR_NAME, VALIDATOR_REQUIRE } from "../shared/util/validators";
+import { useParams } from "react-router-dom";
+import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
+import Service from "../shared/Service";
 
-const UpdateTeamPage = () => {
-  const [cities, setCities] = useState([]);
-  const [identifiedTeam, setIdentifiedTeam] = useState();
+const UpdateTeamPage = (props) => {
+  const cities = require("../shared/Cities");
   const sports = [
     "Football",
     "Basketball",
@@ -26,141 +19,171 @@ const UpdateTeamPage = () => {
     "Volleyball",
     "Footvolley",
   ];
-
-  const getCities = () => {
-    axios
-      .post("https://countriesnow.space/api/v0.1/countries/cities", {
-        country: "israel",
-      })
-      .then((res) => {
-        const citiesList = res.data.data;
-        setCities(citiesList);
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-      });
-  };
-  useEffect(getCities, []);
-  const history = useHistory();
   const teamID = useParams().teamID;
+  const auth = useContext(AuthContext);
+  const history = useHistory();
+  const [blurFields, setBlurFields] = useState({
+    name: false,
+    city: false,
+    sportType: false,
+  });
 
-  const [formState, inputHandler, setFormData] = useForm(
-    {
-      name: {
-        value: "",
-        isValid: false,
-      },
-      city: {
-        value: "",
-        isValid: false,
-      },
-      sportType: {
-        value: "",
-        isValid: false,
-      },
-    },
-    false
-  );
+  const [teamData, setTeamData] = useState({
+    name: "",
+    city: "",
+    sportType: "",
+  });
+  const isValid =
+    VALIDATOR_NAME(teamData.name) &&
+    VALIDATOR_REQUIRE(teamData.city) &&
+    VALIDATOR_REQUIRE(teamData.sportType);
 
   useEffect(() => {
-    const getTeam = async () => {
-      try {
-        const res = await api.get(`/teams/get/${teamID}`);
-        setIdentifiedTeam(res.data);
-        setFormData(
-          {
-            name: {
-              value: res.data.name,
-              isValid: true,
-            },
-            city: {
-              value: res.data.city,
-              isValid: true,
-            },
-            sportType: {
-              value: res.data.sportType,
-              isValid: true,
-            },
-          },
-          true
-        );
-      } catch (err) {
-        console.log(err);
+    const setTeam = async () => {
+      const res = await Service.getTeam(teamID);
+      if (res._id) {
+        setTeamData({
+          name: res.name,
+          city: res.city,
+          sportType: res.sportType,
+        });
       }
     };
-    getTeam();
-  }, [setFormData, teamID]);
+    setTeam();
+  }, [setTeamData, teamID]);
 
-  const teamUpdateSubmitHandler = (event) => {
+  const TeamSubmitHandler = async (event) => {
     event.preventDefault();
     const body = {
-      name: formState.inputs.name.value,
-      city: formState.inputs.city.value,
-      sportType: formState.inputs.sportType.value,
+      _id: auth.loggedUser,
+      name: teamData.name,
+      city: teamData.city,
+      sportType: teamData.sportType,
     };
-    api.put(`teams/${teamID}`, body).then((res) => {
-      history.push("/");
-    });
+    const res = await Service.updateTeam(teamID, body);
+    if (res.status === 200) {
+      props.setAlertMessage(
+        `Successfully updated your team "${res.data.name}"`,
+        false
+      );
+      history.push("/teams");
+    } else {
+      props.setAlertMessage(res.data.error, true);
+    }
   };
 
-  if (!identifiedTeam) {
-    return (
-      <div className="center">
-        <Card>
-          <h2>Could not find game!</h2>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <Card className="team-form">
-      <h2>Update Team</h2>
-      <hr />
-      <form onSubmit={teamUpdateSubmitHandler}>
-        <Input
-          id="name"
-          element="input"
-          type="text"
-          label="Name"
-          validators={[
-            VALIDATOR_REQUIRE(),
-            VALIDATOR_MINLENGTH(2),
-            VALIDATOR_MAXLENGTH(50),
-          ]}
-          errorText="Please enter a valid name."
-          onInput={inputHandler}
-          initialValue={identifiedTeam.name}
-          initialValid={true}
-        />
-        <Input
-          id="city"
-          element="dropbox"
-          label="City"
-          options={cities}
-          validators={[VALIDATOR_REQUIRE()]}
-          errorText="Please select a city"
-          onInput={inputHandler}
-          initialValue={identifiedTeam.city}
-          initialValid={true}
-        />
-        <Input
-          element="dropbox"
-          id="sportType"
-          type="text"
-          label="Sport"
-          options={sports}
-          validators={[VALIDATOR_REQUIRE()]}
-          errorText="Please select a sport."
-          onInput={inputHandler}
-          initialValue={identifiedTeam.sportType}
-          initialValid={true}
-        />
-        <Button type="submit" disabled={!formState.isValid}>
+    <Container component='main' maxWidth='xs' sx={{ my: 15 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography align='center' component='h1' variant='h4' marginBottom={3}>
           Update Team
-        </Button>
-      </form>
-    </Card>
+        </Typography>
+        <Box component='form' noValidate onSubmit={TeamSubmitHandler}>
+          <Grid container spacing={3} justifyContent='center'>
+            <Grid item xs={12}>
+              <TextField
+                required
+                id='name'
+                name='name'
+                label='Team Name'
+                type='text'
+                fullWidth
+                variant='outlined'
+                value={teamData.name}
+                error={
+                  teamData.name !== "" &&
+                  !VALIDATOR_NAME(teamData.name) &&
+                  blurFields.name
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, name: true }))
+                }
+                onChange={(e) => {
+                  const newName = e.target.value;
+                  setTeamData((perv) => ({ ...perv, name: newName }));
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label='Prefered Sport'
+                id='sportType'
+                name='sportType'
+                type='text'
+                variant='outlined'
+                value={teamData.sportType}
+                error={
+                  teamData.sportType !== "" &&
+                  !VALIDATOR_REQUIRE(teamData.sportType) &&
+                  blurFields.sportType
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, sportType: true }))
+                }
+                onChange={(e) => {
+                  const newSportType = e.target.value;
+                  setTeamData((perv) => ({
+                    ...perv,
+                    sportType: newSportType,
+                  }));
+                }}
+              >
+                {sports.map((option, key) => (
+                  <MenuItem key={key} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label='City'
+                id='city'
+                name='city'
+                type='text'
+                variant='outlined'
+                value={teamData.city}
+                error={
+                  teamData.city !== "" &&
+                  !VALIDATOR_REQUIRE(teamData.city) &&
+                  blurFields.city
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, city: true }))
+                }
+                onChange={(e) => {
+                  const newCity = e.target.value;
+                  setTeamData((perv) => ({
+                    ...perv,
+                    city: newCity,
+                  }));
+                }}
+              >
+                {cities.map((option, key) => (
+                  <MenuItem key={key} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sx={{ textAlign: "center" }}>
+              <Button
+                type='submit'
+                variant='contained'
+                sx={{ width: "100px" }}
+                disabled={!isValid}
+              >
+                Submit
+              </Button>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

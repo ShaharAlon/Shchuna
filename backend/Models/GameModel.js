@@ -8,6 +8,6 @@ const gameScheme = new mongoose.Schema({
   availableSpots: { type: Number, required: true },
   totalSpots: { type: Number, required: true },
   sportType: { type: String, required: true },
-  players: { type: [String], required: true },
+  players: [{ type: mongoose.Schema.Types.ObjectId, ref: "Players" }],
 });
 module.exports = mongoose.model("Games", gameScheme);

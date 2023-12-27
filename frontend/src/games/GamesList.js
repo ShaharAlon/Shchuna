@@ -1,57 +1,75 @@
 import React from "react";
 import Game from "./Game";
-import Card from "../shared/components/UIElements/Card";
-import "./GamesList.css";
+import dayjs from "dayjs";
+import {
+  Grid,
+  List,
+  Card,
+  CardContent,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
 
 const GamesList = (props) => {
-  if (props.items.length === 0) {
+  if (props.isLoading) {
     return (
-      <div className="center">
-        <Card>
-          <h2>No games found.</h2>
-        </Card>
-      </div>
+      <Grid container justifyContent='center'>
+        <CircularProgress />
+      </Grid>
+    );
+  }
+
+  if (props.items.length === 0 && !props.isLoading) {
+    return (
+      <Card>
+        <CardContent>
+          <Typography variant='h5'>No games found</Typography>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <ul className="games-list">
-      {props.items
-        .filter((a) => new Date(a.time) > new Date())
-        .sort((a, b) => new Date(a.time) - new Date(b.time))
-        .map((game) => (
-          <Game
-            key={game._id}
-            gameID={game._id}
-            orgnizer={game.orgnizer}
-            place={game.place}
-            city={game.city}
-            time={game.time}
-            availableSpots={game.availableSpots}
-            sportType={game.sportType}
-            players={game.players}
-            updateHandler={props.updateHandler}
-            expired={false}
-          />
-        ))}
-      {props.items
-        .filter((a) => new Date(a.time) < new Date())
-        .sort((a, b) => new Date(b.time) - new Date(a.time))
-        .map((game) => (
-          <Game
-            key={game._id}
-            gameID={game._id}
-            orgnizer={game.orgnizer}
-            place={game.place}
-            city={game.city}
-            time={game.time}
-            availableSpots={game.availableSpots}
-            players={game.players}
-            updateHandler={props.updateHandler}
-            expired={true}
-          />
-        ))}
-    </ul>
+    <Grid container justifyContent='center'>
+      <List>
+        {props.items
+          .filter((a) => dayjs(a.time) > dayjs())
+          .sort((a, b) => dayjs(a.time) - dayjs(b.time))
+          .map((game) => (
+            <Game
+              key={game._id}
+              gameID={game._id}
+              orgnizer={game.orgnizer}
+              place={game.place}
+              city={game.city}
+              time={game.time}
+              availableSpots={game.availableSpots}
+              sportType={game.sportType}
+              players={game.players}
+              updateHandler={props.updateHandler}
+              expired={false}
+            />
+          ))}
+        {props.items
+          .filter((a) => dayjs(a.time) < dayjs())
+          .sort((a, b) => dayjs(b.time) - dayjs(a.time))
+          .map((game) => (
+            <Game
+              key={game._id}
+              gameID={game._id}
+              orgnizer={game.orgnizer}
+              place={game.place}
+              city={game.city}
+              time={game.time}
+              availableSpots={game.availableSpots}
+              sportType={game.sportType}
+              players={game.players}
+              updateHandler={props.updateHandler}
+              expired={true}
+            />
+          ))}
+      </List>
+    </Grid>
   );
 };
 

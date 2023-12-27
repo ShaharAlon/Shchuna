@@ -1,54 +1,84 @@
 import React, { useState, useContext } from "react";
-import Avatar from "../shared/components/UIElements/Avatar";
-import Card from "../shared/components/UIElements/Card";
-import Modal from "../shared/components/UIElements/Modal";
-import Button from "../shared/components/FormElements/Button";
-import PlayersList from "../players/PlayersList";
+import {
+  Button,
+  Paper,
+  Avatar,
+  IconButton,
+  Typography,
+  Collapse,
+  Grid,
+} from "@mui/material";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import { styled } from "@mui/material/styles";
+import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
+import { List, ListItem, ListItemText } from "@mui/material";
 import * as images from "../images";
-import api from "../shared/api";
-import "./Team.css";
+import Service from "../shared/Service";
 import { AuthContext } from "../shared/context/auth-context";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
+
+const ExpandMore = styled((props) => {
+  const { expand, ...other } = props;
+  return <IconButton {...other} />;
+})(({ theme, expand }) => ({
+  transform: !expand ? "rotate(0deg)" : "rotate(180deg)",
+  transition: theme.transitions.create("transform", {
+    duration: theme.transitions.duration.shortest,
+  }),
+}));
 
 const Team = (props) => {
   const auth = useContext(AuthContext);
   const history = useHistory();
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [isClickedTeam, setIsClicked] = useState(false);
-  const TeamClickHandler = () => {
-    setIsClicked(!isClickedTeam);
-  };
+  const isJoined = props.players.some(
+    (player) => player._id === auth.loggedUser
+  );
   const isOwner = props.owner === auth.loggedUser;
-  const isJoined = props.players.includes(auth.loggedUser);
+
+  const [expanded, setExpanded] = useState(false);
+  const handleExpandClick = () => {
+    setExpanded(!expanded);
+  };
 
   const joinHandler = async () => {
-    setIsClicked(!isClickedTeam);
+    setExpanded(!expanded);
     const body = {
       teamID: props.teamID,
       _id: auth.loggedUser,
     };
 
-    await api.post("teams/join", body).then((res) => {
+    const res = await Service.joinTeam(body);
+
+    if (res.status === 200) {
       props.updateHandler();
-    });
+    }
   };
 
   const unjoinHandler = async () => {
-    setIsClicked(!isClickedTeam);
+    setExpanded(!expanded);
     const body = {
       teamID: props.teamID,
       _id: auth.loggedUser,
     };
 
-    await api.post("teams/unjoin", body).then((res) => {
+    const res = await Service.unjoinTeam(body);
+
+    if (res.status === 200) {
       props.updateHandler();
-    });
+    }
   };
 
   const deleteHandler = async () => {
-    await api.delete(`teams/${props.teamID}`).then((res) => {
+    const res = await Service.deleteTeam();
+
+    if (res.status === 200) {
       props.updateHandler();
-    });
+    }
   };
 
   const updateHandler = () => {
@@ -56,64 +86,112 @@ const Team = (props) => {
   };
 
   return (
-    <li className="team" onClick={TeamClickHandler}>
-      <Card className="team__content">
-        <a>
-          <div className="team__image">
-            <Avatar image={images[`${props.sportType}`]} alt={props.name} />
-          </div>
-          <div className="team__info">
-            <h2>{props.name}</h2>
-            <h2>{props.city}</h2>
-            {isClickedTeam && <PlayersList isTeam={true} ID={props.teamID} />}
-            {isClickedTeam && auth.isLoggedIn && !isJoined && !isOwner && (
-              <Button join type="submit" onClick={joinHandler}>
-                {"JOIN"}
-              </Button>
-            )}
-            {isClickedTeam && auth.isLoggedIn && isOwner && (
-              <React.Fragment>
-                <Button update type="submit" onClick={updateHandler}>
-                  {"UPDATE"}
-                </Button>
+    <ListItem key={props.teamID}>
+      <Paper
+        sx={{
+          width: "700px",
+          background: "#DFE9F5",
+          paddingY: "10px",
+          mb: "15px",
+        }}
+      >
+        <Grid container direction='column' alignItems='center'>
+          <Avatar
+            src={images[`${props.sportType}`]}
+            sx={{ width: 80, height: 80 }}
+          />
+          <Typography variant='h5'>{props.name}</Typography>
+          <Typography variant='h5'>{props.city}</Typography>
+
+          <ExpandMore
+            expand={expanded}
+            onClick={handleExpandClick}
+            aria-expanded={expanded}
+            aria-label='show more'
+          >
+            <ExpandMoreIcon />
+          </ExpandMore>
+          <Collapse in={expanded} timeout='auto' unmountOnExit>
+            <List>
+              {props.players.map((player) => (
+                <ListItem key={player._id} divider>
+                  <ListItemText
+                    primary={player.name}
+                    secondary={`Phone: ${player.phone}`}
+                  />
+                </ListItem>
+              ))}
+            </List>
+            <Grid
+              container
+              justifyContent='center'
+              spacing={2}
+              marginY={"10px"}
+            >
+              <Grid item>
                 <Button
-                  danger
-                  type="submit"
+                  variant='contained'
+                  color={isJoined ? "error" : "success"}
+                  sx={{
+                    minWidth: "90px",
+                    display: isOwner || !auth.isLoggedIn ? "none" : "undefined",
+                  }}
+                  onClick={isJoined ? unjoinHandler : joinHandler}
+                >
+                  {isJoined ? "Cancel Join" : "Join"}
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button
+                  variant='contained'
+                  color='warning'
+                  sx={{
+                    minWidth: "90px",
+                    display: isOwner ? "undefined" : "none",
+                  }}
+                  onClick={updateHandler}
+                >
+                  update
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button
+                  variant='contained'
+                  color='error'
+                  sx={{
+                    minWidth: "90px",
+                    display: isOwner ? "undefined" : "none",
+                  }}
                   onClick={() => setShowConfirmDelete(true)}
                 >
-                  {"DELETE"}
+                  delete
                 </Button>
-              </React.Fragment>
-            )}
-            {isClickedTeam && auth.isLoggedIn && isJoined && !isOwner && (
-              <Button danger type="submit" onClick={unjoinHandler}>
-                {"LEAVE"}
-              </Button>
-            )}
-            <Modal
-              show={showConfirmDelete}
-              onCancel={() => setShowConfirmDelete(false)}
-              header="Are you sure?"
-              footer={
-                <React.Fragment>
-                  <Button inverse onClick={() => setShowConfirmDelete(false)}>
-                    CANCEL
-                  </Button>
-                  <Button danger onClick={deleteHandler}>
-                    DELETE
-                  </Button>
-                </React.Fragment>
-              }
-            >
-              <p>
-                Do you want to proceed and delete this Team? Please note that it
-                can't be undone.
-              </p>
-            </Modal>
-          </div>
-        </a>
-      </Card>
-    </li>
+              </Grid>
+            </Grid>
+          </Collapse>
+        </Grid>
+        <Dialog
+          open={showConfirmDelete}
+          onClose={() => setShowConfirmDelete(false)}
+          aria-labelledby='alert-dialog-title'
+          aria-describedby='alert-dialog-description'
+        >
+          <DialogTitle id='alert-dialog-title'>{"Are you sure?"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText id='alert-dialog-description'>
+              Do you want to proceed and delete this Team? Please note that it
+              can't be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowConfirmDelete(false)}>Cancel</Button>
+            <Button color='error' onClick={deleteHandler} autoFocus>
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Paper>
+    </ListItem>
   );
 };
 

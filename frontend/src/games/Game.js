@@ -1,14 +1,35 @@
 import React, { useState, useContext } from "react";
-import Avatar from "../shared/components/UIElements/Avatar";
-import Card from "../shared/components/UIElements/Card";
-import Modal from "../shared/components/UIElements/Modal";
-import Button from "../shared/components/FormElements/Button";
-import PlayersList from "../players/PlayersList";
+import {
+  Button,
+  Paper,
+  Avatar,
+  IconButton,
+  Typography,
+  Collapse,
+  Grid,
+} from "@mui/material";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import { List, ListItem, ListItemText } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 import * as images from "../images";
-import api from "../shared/api";
-import "./Game.css";
+import Service from "../shared/Service";
 import { AuthContext } from "../shared/context/auth-context";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
+
+const ExpandMore = styled((props) => {
+  const { expand, ...other } = props;
+  return <IconButton {...other} />;
+})(({ theme, expand }) => ({
+  transform: !expand ? "rotate(0deg)" : "rotate(180deg)",
+  transition: theme.transitions.create("transform", {
+    duration: theme.transitions.duration.shortest,
+  }),
+}));
 
 const Game = (props) => {
   const date = new Date(props.time).toLocaleString("en-IL", {
@@ -21,41 +42,48 @@ const Game = (props) => {
   const auth = useContext(AuthContext);
   const history = useHistory();
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-  const [isClickedGame, setIsClicked] = useState(false);
-  const GameClickHandler = () => {
-    setIsClicked(!isClickedGame && !props.expired);
-  };
-  const isJoined = props.players.includes(auth.loggedUser);
+  const isJoined = props.players.some(
+    (player) => player._id === auth.loggedUser
+  );
   const isOrgnizer = props.orgnizer === auth.loggedUser;
 
+  const [expanded, setExpanded] = useState(false);
+  const handleExpandClick = () => {
+    setExpanded(!expanded);
+  };
+
   const joinHandler = async () => {
-    setIsClicked(!isClickedGame && !props.expired);
+    setExpanded(!expanded);
     const body = {
       gameID: props.gameID,
       _id: auth.loggedUser,
     };
 
-    await api.post("games/join", body).then((res) => {
+    const res = await Service.joinGame(body);
+
+    if (res.status === 200) {
       props.updateHandler();
-    });
+    }
   };
 
   const unjoinHandler = async () => {
-    setIsClicked(!isClickedGame && !props.expired);
+    setExpanded(!expanded);
     const body = {
       gameID: props.gameID,
       _id: auth.loggedUser,
     };
 
-    await api.post("games/unjoin", body).then((res) => {
+    const res = await Service.unjoinGame(body);
+    if (res.status === 200) {
       props.updateHandler();
-    });
+    }
   };
 
   const deleteHandler = async () => {
-    await api.delete(`games/${props.gameID}`).then((res) => {
+    const res = await Service.deleteGame(props.gameID);
+    if (res.status === 200) {
       props.updateHandler();
-    });
+    }
   };
 
   const updateHandler = () => {
@@ -63,78 +91,132 @@ const Game = (props) => {
   };
 
   return (
-    <li className="game" onClick={GameClickHandler}>
-      <Card className="game__content">
-        <a>
-          <div className="game__image">
-            <Avatar image={images[`${props.sportType}`]} alt={props.name} />
-          </div>
-          <div className="game__info">
-            <h2>{props.place}</h2>
-            <h2>{props.city}</h2>
-            <h2>{date}</h2>
-            {!props.expired && (
-              <h3>
-                {props.availableSpots}{" "}
-                {props.availableSpots === 1
-                  ? "Available Spot"
-                  : "Available Spots"}
-              </h3>
-            )}
-            {props.expired && <h4>{"Expired!"}</h4>}
-            {isClickedGame && <PlayersList isTeam={false} ID={props.gameID} />}
-            {isClickedGame &&
-              auth.isLoggedIn &&
-              !isJoined &&
-              !isOrgnizer &&
-              props.availableSpots > 0 && (
-                <Button join type="submit" onClick={joinHandler}>
-                  {"JOIN"}
-                </Button>
-              )}
-            {isClickedGame && auth.isLoggedIn && isOrgnizer && (
-              <React.Fragment>
-                <Button update type="submit" onClick={updateHandler}>
-                  {"UPDATE"}
-                </Button>
+    <ListItem key={props.gameID}>
+      <Paper
+        sx={{
+          width: "700px",
+          background: "#DFE9F5",
+          paddingY: "10px",
+          mb: "15px",
+        }}
+      >
+        <Grid container direction='column' alignItems='center'>
+          <Avatar
+            src={images[`${props.sportType}`]}
+            sx={{ width: 80, height: 80 }}
+          />
+          <Typography variant='h5'>{props.place}</Typography>
+          <Typography variant='h5'>{props.city}</Typography>
+          <Typography
+            variant='h5'
+            color={props.expired ? "red" : "text.secondary"}
+          >
+            {date}
+          </Typography>
+          <ExpandMore
+            expand={expanded}
+            onClick={handleExpandClick}
+            aria-expanded={expanded}
+            aria-label='show more'
+          >
+            <ExpandMoreIcon />
+          </ExpandMore>
+          <Collapse in={expanded} timeout='auto' unmountOnExit>
+            <List>
+              {props.players.map((player) => (
+                <ListItem key={player._id} divider>
+                  <ListItemText
+                    primary={player.name}
+                    secondary={`Phone: ${player.phone}`}
+                  />
+                </ListItem>
+              ))}
+            </List>
+            <Typography
+              variant='h6'
+              color={props.expired ? "red" : "text.secondary"}
+            >
+              {props.availableSpots === 0
+                ? "The game is full"
+                : props.expired
+                ? "The game is finished"
+                : props.availableSpots === 1
+                ? `${props.availableSpots} Spot left`
+                : `${props.availableSpots} Spots left`}
+            </Typography>
+            <Grid
+              container
+              justifyContent='center'
+              spacing={2}
+              marginY={"10px"}
+            >
+              <Grid item>
                 <Button
-                  danger
-                  type="submit"
+                  variant='contained'
+                  color={isJoined ? "error" : "success"}
+                  sx={{
+                    minWidth: "90px",
+                    display:
+                      isOrgnizer || !auth.isLoggedIn || props.expired
+                        ? "none"
+                        : "undefined",
+                  }}
+                  onClick={isJoined ? unjoinHandler : joinHandler}
+                >
+                  {isJoined ? "Cancel Join" : "Join"}
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button
+                  variant='contained'
+                  color='warning'
+                  sx={{
+                    minWidth: "90px",
+                    display: isOrgnizer ? "undefined" : "none",
+                  }}
+                  onClick={updateHandler}
+                >
+                  update
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button
+                  variant='contained'
+                  color='error'
+                  sx={{
+                    minWidth: "90px",
+                    display: isOrgnizer ? "undefined" : "none",
+                  }}
                   onClick={() => setShowConfirmDelete(true)}
                 >
-                  {"DELETE"}
+                  delete
                 </Button>
-              </React.Fragment>
-            )}
-            {isClickedGame && auth.isLoggedIn && isJoined && !isOrgnizer && (
-              <Button danger type="submit" onClick={unjoinHandler}>
-                {"LEAVE"}
-              </Button>
-            )}
-            <Modal
-              show={showConfirmDelete}
-              onCancel={() => setShowConfirmDelete(false)}
-              header="Are you sure?"
-              footer={
-                <React.Fragment>
-                  <Button inverse onClick={() => setShowConfirmDelete(false)}>
-                    CANCEL
-                  </Button>
-                  <Button danger onClick={deleteHandler}>
-                    DELETE
-                  </Button>
-                </React.Fragment>
-              }
-            >
-              <p>
-                Do you want to proceed and delete this game? Please note that it
-                can't be undone.
-              </p>
-            </Modal>
-          </div>
-        </a>
-      </Card>
-    </li>
+              </Grid>
+            </Grid>
+          </Collapse>
+        </Grid>
+        <Dialog
+          open={showConfirmDelete}
+          onClose={() => setShowConfirmDelete(false)}
+          aria-labelledby='alert-dialog-title'
+          aria-describedby='alert-dialog-description'
+        >
+          <DialogTitle id='alert-dialog-title'>{"Are you sure?"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText id='alert-dialog-description'>
+              Do you want to proceed and delete this Game? Please note that it
+              can't be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowConfirmDelete(false)}>Cancel</Button>
+            <Button color='error' onClick={deleteHandler} autoFocus>
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Paper>
+    </ListItem>
   );
 };
 
