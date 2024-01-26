@@ -1,23 +1,26 @@
 import React, { useEffect, useState } from "react";
 import GamesList from "./GamesList";
-import api from "../shared/api";
+import Service from "../shared/Service";
 
 const GamesPage = () => {
   const [gamesData, setGamesData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getGames = () => {
-    api
-      .get("games/")
-      .then((res) => {
-        const games = res.data;
-        setGamesData(games);
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-      });
+  const getGames = async () => {
+    const res = await Service.getGames();
+    setGamesData(res);
+    setIsLoading(false);
   };
-  useEffect(getGames, []);
-  return <GamesList items={gamesData} updateHandler={getGames} />;
+  useEffect(() => {
+    getGames();
+  }, []);
+  return (
+    <GamesList
+      items={gamesData}
+      isLoading={isLoading}
+      updateHandler={getGames}
+    />
+  );
 };
 
 export default GamesPage;

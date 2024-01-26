@@ -1,23 +1,22 @@
-import React, { useEffect, useContext, useState } from "react";
-import Card from "../shared/components/UIElements/Card";
-import Input from "../shared/components/FormElements/Input";
-import Button from "../shared/components/FormElements/Button";
+import React, { useContext, useState } from "react";
+import TextField from "@mui/material/TextField";
+import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
+import MenuItem from "@mui/material/MenuItem";
+import { Button, Container, Paper, Typography } from "@mui/material";
+import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import dayjs from "dayjs";
+import "dayjs/locale/en-gb";
 import { AuthContext } from "../shared/context/auth-context";
-import {
-  VALIDATOR_REQUIRE,
-  VALIDATOR_MINLENGTH,
-  VALIDATOR_MAX,
-  VALIDATOR_MIN,
-  VALIDATOR_MAXLENGTH,
-} from "../shared/util/validators";
-import { useForm } from "../shared/hooks/form-hook";
-import "./GamesForms.css";
-import api from "../shared/api";
+import { VALIDATOR_NAME, VALIDATOR_REQUIRE } from "../shared/util/validators";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
-import axios from "axios";
+import Service from "../shared/Service";
 
-const AddGamePage = () => {
-  const [cities, setCities] = useState([]);
+const AddGamePage = (props) => {
+  const cities = require("../shared/Cities");
   const sports = [
     "Football",
     "Basketball",
@@ -25,127 +24,209 @@ const AddGamePage = () => {
     "Volleyball",
     "Footvolley",
   ];
-
-  const getCities = () => {
-    axios
-      .post("https://countriesnow.space/api/v0.1/countries/cities", {
-        country: "israel",
-      })
-      .then((res) => {
-        const citiesList = res.data.data;
-        setCities(citiesList);
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-      });
-  };
-  useEffect(getCities, []);
   const auth = useContext(AuthContext);
   const history = useHistory();
-  const [formState, inputHandler] = useForm(
-    {
-      place: {
-        value: "",
-        isValid: false,
-      },
-      city: {
-        value: "",
-        isValid: false,
-      },
-      time: {
-        value: new Date(),
-        isValid: false,
-      },
-      totalSpots: {
-        value: "",
-        isValid: false,
-      },
-      sportType: {
-        value: "",
-        isValid: false,
-      },
-    },
-    false
-  );
+  const [blurFields, setBlurFields] = useState({
+    place: false,
+    city: false,
+    time: false,
+    totalSpots: false,
+    sportType: false,
+  });
+  const [gameData, setGameData] = useState({
+    place: "",
+    city: "",
+    time: dayjs().add(1, "hour"),
+    totalSpots: "",
+    sportType: "",
+  });
+
+  const isValid =
+    VALIDATOR_NAME(gameData.place) &&
+    VALIDATOR_REQUIRE(gameData.city) &&
+    VALIDATOR_REQUIRE(gameData.time) &&
+    VALIDATOR_REQUIRE(gameData.totalSpots) &&
+    VALIDATOR_REQUIRE(gameData.sportType);
 
   const GameSubmitHandler = async (event) => {
     event.preventDefault();
     const body = {
       _id: auth.loggedUser,
-      place: formState.inputs.place.value,
-      city: formState.inputs.city.value,
-      time: formState.inputs.time.value,
-      totalSpots: formState.inputs.totalSpots.value,
-      sportType: formState.inputs.sportType.value,
+      place: gameData.place,
+      city: gameData.city,
+      sportType: gameData.sportType,
+      time: gameData.time,
+      totalSpots: gameData.totalSpots,
     };
-    await api.post("games/add/", body).then(() => {
+    const res = await Service.addGame(body);
+    if (res.status === 200) {
+      props.setAlertMessage(
+        `Successfully created your game in ${res.data.place}`,
+        false
+      );
       history.push("/");
-    });
+    } else {
+      props.setAlertMessage(res.data.error, true);
+    }
   };
 
   return (
-    <Card className="game-form">
-      <h2>New Game</h2>
-      <hr />
-      <form onSubmit={GameSubmitHandler}>
-        <Input
-          id="place"
-          element="input"
-          type="text"
-          label="Place"
-          validators={[
-            VALIDATOR_REQUIRE(),
-            VALIDATOR_MINLENGTH(2),
-            VALIDATOR_MAXLENGTH(50),
-          ]}
-          errorText="Please enter a valid place."
-          onInput={inputHandler}
-        />
-        <Input
-          id="city"
-          element="dropbox"
-          label="City"
-          options={cities}
-          validators={[VALIDATOR_REQUIRE()]}
-          errorText="Please enter a valid city"
-          onInput={inputHandler}
-        />
-        <Input
-          id="time"
-          element="datetime"
-          label="Time"
-          initialValue={new Date()}
-          validators={[VALIDATOR_REQUIRE()]}
-          errorText="Please enter a valid time."
-          onInput={inputHandler}
-        />
-        <Input
-          id="totalSpots"
-          element="input"
-          label="Total Spots"
-          validators={[
-            VALIDATOR_REQUIRE(),
-            VALIDATOR_MIN(1),
-            VALIDATOR_MAX(99),
-          ]}
-          errorText="Please enter a valid total spots."
-          onInput={inputHandler}
-        />
-        <Input
-          id="sportType"
-          element="dropbox"
-          type="text"
-          label="Sport"
-          options={sports}
-          validators={[VALIDATOR_REQUIRE()]}
-          errorText="Please select a sport."
-          onInput={inputHandler}
-        />
-        <Button type="submit" disabled={!formState.isValid}>
+    <Container component='main' maxWidth='xs' sx={{ my: 15 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography align='center' component='h1' variant='h4' marginBottom={3}>
           Add Game
-        </Button>
-      </form>
-    </Card>
+        </Typography>
+        <Box component='form' noValidate onSubmit={GameSubmitHandler}>
+          <Grid container spacing={3} justifyContent='center'>
+            <Grid item xs={12}>
+              <TextField
+                required
+                id='place'
+                name='place'
+                label='Place'
+                type='text'
+                fullWidth
+                variant='outlined'
+                error={
+                  gameData.place !== "" &&
+                  !VALIDATOR_NAME(gameData.place) &&
+                  blurFields.place
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, place: true }))
+                }
+                onChange={(e) => {
+                  const newPlace = e.target.value;
+                  setGameData((perv) => ({ ...perv, place: newPlace }));
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label='City'
+                id='city'
+                name='city'
+                type='text'
+                variant='outlined'
+                value={gameData.city}
+                error={
+                  gameData.city !== "" &&
+                  !VALIDATOR_REQUIRE(gameData.city) &&
+                  blurFields.city
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, city: true }))
+                }
+                onChange={(e) => {
+                  const newCity = e.target.value;
+                  setGameData((perv) => ({
+                    ...perv,
+                    city: newCity,
+                  }));
+                }}
+              >
+                {cities.map((option, key) => (
+                  <MenuItem key={key} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label='Prefered Sport'
+                id='sportType'
+                name='sportType'
+                type='text'
+                variant='outlined'
+                value={gameData.sportType}
+                error={
+                  gameData.sportType !== "" &&
+                  !VALIDATOR_REQUIRE(gameData.sportType) &&
+                  blurFields.sportType
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, sportType: true }))
+                }
+                onChange={(e) => {
+                  const newSportType = e.target.value;
+                  setGameData((perv) => ({
+                    ...perv,
+                    sportType: newSportType,
+                  }));
+                }}
+              >
+                {sports.map((option, key) => (
+                  <MenuItem key={key} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                required
+                id='totalSpots'
+                name='totalSpots'
+                label='Total Spots'
+                type='number'
+                fullWidth
+                variant='outlined'
+                error={
+                  gameData.totalSpots !== "" &&
+                  !VALIDATOR_REQUIRE(gameData.totalSpots) &&
+                  blurFields.totalSpots
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, totalSpots: true }))
+                }
+                onChange={(e) => {
+                  const newTotalSpots = e.target.value;
+                  setGameData((perv) => ({
+                    ...perv,
+                    totalSpots: newTotalSpots,
+                  }));
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <LocalizationProvider
+                dateAdapter={AdapterDayjs}
+                adapterLocale='en-gb'
+              >
+                <DemoContainer components={["DateTimePicker"]}>
+                  <DateTimePicker
+                    label='Game Time'
+                    value={gameData.time}
+                    disablePast={true}
+                    onChange={(newTime) => {
+                      setGameData((perv) => ({
+                        ...perv,
+                        time: newTime,
+                      }));
+                    }}
+                  />
+                </DemoContainer>
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} sx={{ textAlign: "center" }}>
+              <Button
+                type='submit'
+                variant='contained'
+                sx={{ width: "100px" }}
+                disabled={!isValid}
+              >
+                Submit
+              </Button>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

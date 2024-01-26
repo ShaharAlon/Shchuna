@@ -1,16 +1,18 @@
 const Notification = require("../Models/NotificationModel");
 
-const notify = (senderID, message, approve, receiversID) => {
-  const newNotification = new Notification({
-    sender: senderID,
-    message: message,
-    receivers: receiversID,
+const notify = (senderID, message, receiversID) => {
+  receiversID.map((ID) => {
+    const newNotification = new Notification({
+      sender: senderID,
+      message: message,
+      receiver: ID,
+    });
+    newNotification.save();
   });
-  newNotification.save();
 };
 
 const getNotifications = (req, res) => {
-  Notification.find({ receivers: { $elemMatch: { $eq: req.params.playerID } } })
+  Notification.find({ receiver: req.params.playerID })
     .then((notifications) => res.status(200).json(notifications))
     .catch((err) =>
       res.status(404).json({ error: "No notification found by this id" + err })

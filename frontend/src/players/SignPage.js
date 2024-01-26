@@ -1,27 +1,37 @@
 import React, { useState, useContext } from "react";
-import Modal from "../shared/components/UIElements/Modal";
-import Card from "../shared/components/UIElements/Card";
-import Input from "../shared/components/FormElements/Input";
-import Button from "../shared/components/FormElements/Button";
+import TextField from "@mui/material/TextField";
+import Collapse from "@mui/material/Collapse";
+import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
+import MenuItem from "@mui/material/MenuItem";
+import { Button, Container, Paper, Typography } from "@mui/material";
 import {
   VALIDATOR_EMAIL,
-  VALIDATOR_MAXLENGTH,
-  VALIDATOR_MINLENGTH,
+  VALIDATOR_NAME,
   VALIDATOR_PASSWORD,
   VALIDATOR_PHONE,
   VALIDATOR_REQUIRE,
 } from "../shared/util/validators";
-import { useForm } from "../shared/hooks/form-hook";
 import { AuthContext } from "../shared/context/auth-context";
-import "./SignPage.css";
-import api from "../shared/api";
+import Service from "../shared/Service";
 
-const SignPage = () => {
+const SignPage = (props) => {
   const auth = useContext(AuthContext);
   const [isLoginMode, setIsLoginMode] = useState(true);
-  const [showFailed, setShowFailed] = useState(false);
-  const [header, setHeader] = useState("");
-  const [message, setMessage] = useState("");
+  const [blurFields, setBlurFields] = useState({
+    email: false,
+    password: false,
+    name: false,
+    phone: false,
+    sportType: false,
+  });
+  const [authData, setAuthData] = useState({
+    email: "",
+    password: "",
+    name: "",
+    phone: "",
+    sportType: "",
+  });
 
   const sports = [
     "Football",
@@ -30,169 +40,215 @@ const SignPage = () => {
     "Volleyball",
     "Footvolley",
   ];
+  const isValid = isLoginMode
+    ? VALIDATOR_EMAIL(authData.email) && VALIDATOR_PASSWORD(authData.password)
+    : VALIDATOR_EMAIL(authData.email) &&
+      VALIDATOR_PASSWORD(authData.password) &&
+      VALIDATOR_NAME(authData.name) &&
+      VALIDATOR_PHONE(authData.phone) &&
+      VALIDATOR_REQUIRE(authData.sportType);
 
-  const [formState, inputHandler, setFormData] = useForm(
-    {
-      email: {
-        value: "",
-        isValid: false,
-      },
-      password: {
-        value: "",
-        isValid: false,
-      },
-    },
-    false
-  );
-
-  const switchModeHandler = () => {
-    if (!isLoginMode) {
-      setFormData(
-        {
-          ...formState.inputs,
-          name: undefined,
-          phone: undefined,
-          sportType: undefined,
-        },
-        formState.inputs.email.isValid && formState.inputs.password.isValid
-      );
-    } else {
-      setFormData(
-        {
-          ...formState.inputs,
-          name: {
-            value: "",
-            isValid: false,
-          },
-          phone: {
-            value: "",
-            isValid: false,
-          },
-          sportType: {
-            value: "",
-            isValid: false,
-          },
-        },
-        false
-      );
-    }
-    setIsLoginMode((prevMode) => !prevMode);
+  const handleChangeMode = () => {
+    setIsLoginMode((prev) => !prev);
   };
 
   const authSubmitHandler = async (event) => {
     event.preventDefault();
     const body = isLoginMode
       ? {
-          email: formState.inputs.email.value.toLowerCase(),
-          password: formState.inputs.password.value,
+          email: authData.email.toLowerCase(),
+          password: authData.password,
         }
       : {
-          email: formState.inputs.email.value.toLowerCase(),
-          password: formState.inputs.password.value,
-          name: formState.inputs.name.value,
-          phone: formState.inputs.phone.value,
-          sportType: formState.inputs.sportType.value,
+          email: authData.email.toLowerCase(),
+          password: authData.password,
+          name: authData.name,
+          phone: authData.phone,
+          sportType: authData.sportType,
         };
-    const url = isLoginMode ? "players/login/" : "players/signup/";
-    await api
-      .post(url, body)
-      .then((res) => {
+    if (isLoginMode) {
+      const res = await Service.Login(body);
+      if (res.status === 200) {
+        props.setAlertMessage(
+          `Successfully logged in, Welcome ${res.data.name}`,
+          false
+        );
         auth.login(res.data._id);
-      })
-      .catch((err) => {
-        if (isLoginMode) {
-          setShowFailed(true);
-          setHeader("Failed to Login.");
-          setMessage("Email or password incorrect please try again.");
-        } else {
-          setShowFailed(true);
-          setHeader("Failed to Register.");
-          setMessage("Email already used please try login instead.");
-        }
-      });
+      } else {
+        props.setAlertMessage(res.data.error, true);
+      }
+    } else {
+      const res = await Service.SignUp(body);
+      if (res.status === 200) {
+        props.setAlertMessage(
+          `Successfully registered, Welcome ${res.data.name}`,
+          false
+        );
+        auth.login(res._id);
+      } else {
+        props.setAlertMessage(res.data.error, true);
+      }
+    }
   };
 
   return (
-    <Card className="authentication">
-      <h2>{isLoginMode ? "Login" : "Register"}</h2>
-      <hr />
-      <form onSubmit={authSubmitHandler}>
-        <Input
-          element="input"
-          id="email"
-          type="email"
-          label="E-Mail"
-          validators={[VALIDATOR_REQUIRE(), VALIDATOR_EMAIL()]}
-          errorText="Please enter a valid email address."
-          onInput={inputHandler}
-        />
-        <Input
-          element="input"
-          id="password"
-          type="password"
-          label="Password"
-          validators={[VALIDATOR_REQUIRE(), VALIDATOR_PASSWORD()]}
-          errorText="Please enter a valid password."
-          onInput={inputHandler}
-        />
-        {!isLoginMode && (
-          <Input
-            element="input"
-            id="name"
-            type="text"
-            label="Full Name"
-            validators={[
-              VALIDATOR_REQUIRE(),
-              VALIDATOR_MINLENGTH(2),
-              VALIDATOR_MAXLENGTH(30),
-            ]}
-            errorText="Please enter a name."
-            onInput={inputHandler}
-          />
-        )}
-        {!isLoginMode && (
-          <Input
-            element="input"
-            id="phone"
-            type="text"
-            label="Phone Number"
-            validators={[VALIDATOR_REQUIRE(), VALIDATOR_PHONE()]}
-            errorText="Please enter a phone number."
-            onInput={inputHandler}
-          />
-        )}
-        {!isLoginMode && (
-          <Input
-            element="dropbox"
-            id="sportType"
-            type="text"
-            label="Prefered Sport"
-            options={sports}
-            validators={[VALIDATOR_REQUIRE()]}
-            errorText="Please select a prefered sport."
-            onInput={inputHandler}
-          />
-        )}
-        <Button type="submit" disabled={!formState.isValid}>
-          {isLoginMode ? "LOGIN" : "REGISTER"}
-        </Button>
-      </form>
-      <Button inverse onClick={switchModeHandler}>
-        SWITCH TO {isLoginMode ? "REGISTER" : "LOGIN"}
-      </Button>
-      <Modal
-        show={showFailed}
-        onCancel={() => setShowFailed(false)}
-        header={header}
-        footer={
-          <Button inverse onClick={() => setShowFailed(false)}>
-            OK
-          </Button>
-        }
-      >
-        <p>{message}</p>
-      </Modal>
-    </Card>
+    <Container component='main' maxWidth='xs' sx={{ my: 15 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography align='center' component='h1' variant='h4' marginBottom={3}>
+          {isLoginMode ? "Login" : "Register"}
+        </Typography>
+        <Box component='form' noValidate onSubmit={authSubmitHandler}>
+          <Grid container spacing={3} justifyContent='center'>
+            <Grid item xs={12}>
+              <TextField
+                required
+                id='email'
+                name='email'
+                label='Email'
+                type='email'
+                fullWidth
+                variant='outlined'
+                error={
+                  authData.email !== "" &&
+                  !VALIDATOR_EMAIL(authData.email) &&
+                  blurFields.email
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, email: true }))
+                }
+                onChange={(e) => {
+                  const newEmail = e.target.value;
+                  setAuthData((perv) => ({ ...perv, email: newEmail }));
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                required
+                id='password'
+                name='password'
+                label='Password'
+                type='password'
+                fullWidth
+                variant='outlined'
+                error={
+                  authData.password !== "" &&
+                  !VALIDATOR_PASSWORD(authData.password) &&
+                  blurFields.password
+                }
+                onBlur={() =>
+                  setBlurFields((perv) => ({ ...perv, password: true }))
+                }
+                onChange={(e) => {
+                  const newPassword = e.target.value;
+                  setAuthData((perv) => ({ ...perv, password: newPassword }));
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Collapse in={!isLoginMode}>
+                <TextField
+                  required
+                  id='name'
+                  name='name'
+                  label='Full Name'
+                  type='text'
+                  fullWidth
+                  variant='outlined'
+                  error={
+                    authData.name !== "" &&
+                    !VALIDATOR_NAME(authData.name) &&
+                    blurFields.name
+                  }
+                  onBlur={() =>
+                    setBlurFields((perv) => ({ ...perv, name: true }))
+                  }
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    setAuthData((perv) => ({ ...perv, name: newName }));
+                  }}
+                />
+              </Collapse>
+            </Grid>
+            <Grid item xs={12}>
+              <Collapse in={!isLoginMode}>
+                <TextField
+                  required
+                  id='phone'
+                  name='phone'
+                  label='Phone Number'
+                  type='text'
+                  fullWidth
+                  variant='outlined'
+                  error={
+                    authData.phone !== "" &&
+                    !VALIDATOR_PHONE(authData.phone) &&
+                    blurFields.phone
+                  }
+                  onBlur={() =>
+                    setBlurFields((perv) => ({ ...perv, phone: true }))
+                  }
+                  onChange={(e) => {
+                    const newPhone = e.target.value;
+                    setAuthData((perv) => ({ ...perv, phone: newPhone }));
+                  }}
+                />
+              </Collapse>
+            </Grid>
+            <Grid item xs={12}>
+              <Collapse in={!isLoginMode}>
+                <TextField
+                  fullWidth
+                  select
+                  label='Prefered Sport'
+                  id='sportType'
+                  name='sportType'
+                  type='text'
+                  variant='outlined'
+                  value={authData.sportType}
+                  error={
+                    authData.sportType !== "" &&
+                    !VALIDATOR_REQUIRE(authData.sportType) &&
+                    blurFields.sportType
+                  }
+                  onBlur={() =>
+                    setBlurFields((perv) => ({ ...perv, sportType: true }))
+                  }
+                  onChange={(e) => {
+                    const newSportType = e.target.value;
+                    setAuthData((perv) => ({
+                      ...perv,
+                      sportType: newSportType,
+                    }));
+                  }}
+                >
+                  {sports.map((option, key) => (
+                    <MenuItem key={key} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Collapse>
+            </Grid>
+            <Grid item xs={12} sx={{ textAlign: "center" }}>
+              <Button
+                type='submit'
+                variant='contained'
+                sx={{ width: "100px" }}
+                disabled={!isValid}
+              >
+                {isLoginMode ? "login" : "register"}
+              </Button>
+            </Grid>
+            <Grid item xs={12} sx={{ textAlign: "center" }}>
+              <Button variant='outlined' onClick={handleChangeMode}>
+                {isLoginMode ? "switch to register" : "switch to login"}
+              </Button>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

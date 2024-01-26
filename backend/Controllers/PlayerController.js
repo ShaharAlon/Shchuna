@@ -43,7 +43,7 @@ const getPlayersByTeam = (req, res) => {
 const signup = async (req, res) => {
   const existingPlayer = await Player.findOne({ email: req.body.email });
   if (existingPlayer) {
-    res.status(500).json({ error: "Already exists" });
+    res.status(500).json({ error: "Email already exists try login instead" });
     return res;
   }
 
@@ -66,7 +66,7 @@ const login = async (req, res) => {
   const existingPlayer = await Player.findOne({ email: email });
 
   if (!existingPlayer || existingPlayer.password !== password) {
-    return res.status(500).json({ message: "failed to Log in!" });
+    return res.status(500).json({ error: "Wrong email or password try again" });
   }
 
   res.status(200).json(existingPlayer);

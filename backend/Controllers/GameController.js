@@ -4,6 +4,7 @@ const Notification = require("./NotificationController");
 
 const getGames = (req, res) => {
   Game.find()
+    .populate("players")
     .then((games) => res.status(200).json(games))
     .catch((err) => res.status(404).json({ error: "No game found" + err }));
 };
@@ -25,6 +26,7 @@ const getGamesByCity = (req, res) => {
 
 const getGamesByPlayer = (req, res) => {
   Game.find({ players: { $elemMatch: { $eq: req.params.playerID } } })
+    .populate("players")
     .then((game) => res.status(200).json(game))
     .catch((err) =>
       res.status(404).json({ error: "No game found by this id" + err })
@@ -58,7 +60,7 @@ const joinGame = (req, res) => {
       Player.findById({ _id: req.body._id }).then((player) =>
         Notification.notify(
           req.body._id,
-          `${player.name} joined your game`,
+          `${player.name} joined your game in ${game.place} `,
           game.players.filter((a) => a !== req.body._id)
         )
       );

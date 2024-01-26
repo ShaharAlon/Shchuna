@@ -1,0 +1,18 @@
+{
+  "files": {
+    "main.css": "/static/css/main.bc4d509c.css",
+    "main.js": "/static/js/main.7d7d9bfe.js",
+    "static/media/basketball.png": "/static/media/basketball.a0b5075d90d2726600a3.png",
+    "static/media/volleyball.png": "/static/media/volleyball.c4493d278da51b6888bf.png",
+    "static/media/football.png": "/static/media/football.2da38ce7f93a85398fc3.png",
+    "static/media/tennis.png": "/static/media/tennis.ad2dfb84aa4361af2da8.png",
+    "static/media/footvolley.png": "/static/media/footvolley.3b7ae45539788a97f7be.png",
+    "index.html": "/index.html",
+    "main.bc4d509c.css.map": "/static/css/main.bc4d509c.css.map",
+    "main.7d7d9bfe.js.map": "/static/js/main.7d7d9bfe.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.bc4d509c.css",
+    "static/js/main.7d7d9bfe.js"
+  ]
+}

@@ -4,6 +4,7 @@ const Notification = require("./NotificationController");
 
 const getTeams = (req, res) => {
   Team.find()
+    .populate("players")
     .then((teams) => res.status(200).json(teams))
     .catch((err) => res.status(404).json({ error: "No team found" + err }));
 };
@@ -17,6 +18,7 @@ const getTeam = (req, res) => {
 };
 const getTeamsByPlayer = (req, res) => {
   Team.find({ players: { $elemMatch: { $eq: req.params.playerID } } })
+    .populate("players")
     .then((team) => res.status(200).json(team))
     .catch((err) =>
       res.status(404).json({ error: "No team found by this id" + err })
@@ -91,7 +93,7 @@ const updateTeam = (req, res) => {
       Notification.notify(
         team.owner,
         `One of your teams got updated`,
-        team.players
+        team.players.filter((a) => String(a) !== team.owner)
       );
       res.status(200).json(team);
     })

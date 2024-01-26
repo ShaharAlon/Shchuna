@@ -1,34 +1,50 @@
 import React from "react";
 import Team from "./Team";
-import Card from "../shared/components/UIElements/Card";
-import "./TeamsList.css";
+import {
+  Grid,
+  List,
+  Card,
+  CardContent,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
 
 const TeamsList = (props) => {
-  if (props.items.length === 0) {
+  if (props.isLoading) {
     return (
-      <div className="center">
-        <Card>
-          <h2>No Teams found.</h2>
-        </Card>
-      </div>
+      <Grid container justifyContent='center'>
+        <CircularProgress />
+      </Grid>
+    );
+  }
+
+  if (props.items.length === 0 && !props.isLoading) {
+    return (
+      <Card>
+        <CardContent>
+          <Typography variant='h5'>No Teams found</Typography>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <ul className="teams-list">
-      {props.items.map((team) => (
-        <Team
-          key={team._id}
-          teamID={team._id}
-          name={team.name}
-          owner={team.owner}
-          city={team.city}
-          sportType={team.sportType}
-          players={team.players}
-          updateHandler={props.updateHandler}
-        />
-      ))}
-    </ul>
+    <Grid container justifyContent='center'>
+      <List>
+        {props.items.map((team) => (
+          <Team
+            key={team._id}
+            teamID={team._id}
+            name={team.name}
+            owner={team.owner}
+            city={team.city}
+            sportType={team.sportType}
+            players={team.players}
+            updateHandler={props.updateHandler}
+          />
+        ))}
+      </List>
+    </Grid>
   );
 };
 

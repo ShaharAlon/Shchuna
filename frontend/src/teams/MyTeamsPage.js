@@ -1,24 +1,28 @@
 import React, { useEffect, useState, useContext } from "react";
 import TeamsList from "./TeamsList";
-import api from "../shared/api";
+import Service from "../shared/Service";
 import { AuthContext } from "../shared/context/auth-context";
 
 const MyTeamsPage = () => {
   const [teamsData, setTeamsData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const auth = useContext(AuthContext);
-  const getTeams = () => {
-    api
-      .get(`teams/getMyTeams/${auth.loggedUser}/`)
-      .then((res) => {
-        const teams = res.data;
-        setTeamsData(teams);
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-      });
+
+  const getTeams = async () => {
+    const res = await Service.getMyTeams(auth.loggedUser);
+    setTeamsData(res.data);
+    setIsLoading(false);
   };
-  useEffect(getTeams, []);
-  return <TeamsList items={teamsData} updateHandler={getTeams} />;
+  useEffect(() => {
+    getTeams();
+  }, []);
+  return (
+    <TeamsList
+      items={teamsData}
+      updateHandler={getTeams}
+      isLoading={isLoading}
+    />
+  );
 };
 
 export default MyTeamsPage;
