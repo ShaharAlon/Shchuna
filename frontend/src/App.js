@@ -120,7 +120,7 @@ const App = () => {
       }}
     >
       <Router>
-        <MainNavigation />
+        <MainNavigation setAlertMessage={handleAlert} />
         <main>{routes}</main>
         <Snackbar open={alert} autoHideDuration={2400} onClose={handleClose}>
           <MuiAlert

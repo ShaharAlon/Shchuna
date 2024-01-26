@@ -1,0 +1,2 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap);*{box-sizing:border-box}html{font-family:Open Sans,sans-serif}body{margin:0}.slide-in-left-enter{transform:translateX(-100%)}.slide-in-left-enter-active{transition:all .2s}.slide-in-left-enter-active,.slide-in-left-exit{opacity:1;transform:translateX(0)}.slide-in-left-exit-active{opacity:0;transform:translateX(-100%);transition:all .2s}.center{align-items:center;display:flex;justify-content:center;text-align:center}
+/*# sourceMappingURL=main.bc4d509c.css.map*/
